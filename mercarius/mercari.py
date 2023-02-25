@@ -109,7 +109,35 @@ def _search(query, status: SearchItemStatus = SearchItemStatus.ON_SALE, startKey
 
     return resp.json(), variables
 
+def DupCheckers(resp):
+    data = resp
+    unique_ids = set()
+    filtered_data = []
+    id_counts = {}
+
+    # Iterate over the original data
+    for item in data:
+        # Check if the "id" key is already in the set of unique IDs
+        if item["id"] not in unique_ids:
+            # If it's not, add the ID to the set and add the item to the filtered data
+            unique_ids.add(item["id"])
+            filtered_data.append(item)
+        
+        if item["id"] not in id_counts:
+        # If it's not, add the ID to the dictionary with a count of 1
+            id_counts[item["id"]] = 1
+        else:
+            # If it's already in the dictionary, increment the count for the ID
+            id_counts[item["id"]] += 1
+
+    total_duplicates = sum(count - 1 for count in id_counts.values())
+    # Dump the filtered data as a JSON string
+    print(f"Number of Dups:{total_duplicates}")
+    filtered_json_str = json.dumps(filtered_data)
+    return filtered_data
+
 
 def search(query, status: SearchItemStatus = SearchItemStatus.ON_SALE, limit=1000):
     resp, variables = _search(query, status)
+    resp, variables = DupCheckers(resp, variables)
     return ResultSet(resp, limit, variables, status)
