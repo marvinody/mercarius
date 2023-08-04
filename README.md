@@ -38,3 +38,15 @@ print(json.dumps(merch[0], indent=2))
 It'll print out a blob of JSON so you can see all the available properties on the item object.
 
 **Note, you're not guaranteed to have all unique items and may see duplicates.** I recommend to run the final list through a duplicate checker using the id property just to be safe. During my testing it was pretty random.
+
+
+
+# Development
+
+Clone this repo, install the dependencies in `requirement.txt` and off you go.
+
+## Deploying / Publishing
+
+- `python setup.py sdist`
+
+- `twine upload dist/mercari-<version>.tar.gz`
