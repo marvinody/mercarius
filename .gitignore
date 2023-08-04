@@ -1,5 +1,5 @@
 .python-version
 __pycache__/
-mercari.egg-info/
+mercarius.egg-info/
 dist/
 build/

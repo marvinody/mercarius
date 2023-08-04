@@ -7,6 +7,23 @@ import requests
 rootURL = "https://www.mercari.com/"
 # rootProductURL = "https://jp.mercari.com/item/"
 searchURL = "{}v1/api".format(rootURL)
+initializeURL = "{}v1/initialize".format(rootURL)
+
+USER_AGENT = "mercarius wrapper"
+
+
+def generateAccessToken():
+    resp = requests.get(initializeURL, headers={
+        "User-Agent": USER_AGENT
+    })
+
+    data = resp.json()
+
+    # not checking these now, but at the time of writing this code
+    # these tokens expire 7 days after they're created...should be fine
+    token = data["accessToken"]
+
+    return token
 
 
 # probably a better way to handle this transformation but
@@ -26,8 +43,9 @@ class SearchItemStatus(Enum):
         elif self == self.SOLD_OUT:
             return [2, 3]
 
+
 class ResultSet:
-    def __init__(self, resp, limit, variables, status) -> None:
+    def __init__(self, resp, limit, variables, status, token) -> None:
         self._variables = variables
         self._limit = limit
         self._resps = [resp]
@@ -35,15 +53,17 @@ class ResultSet:
         self.nextKey = resp["data"]["search"]["nextKey"]
         self.query = self._variables["criteria"]["query"]
         self.status = status
+        self.token = token
 
     def __iter__(self):
         for rawItem in self._curPageItems:
             yield rawItem
 
         count = len(self._curPageItems)
-        while not self.nextKey == '0' and count < self._limit:
+
+        while count < self._limit and self._curPageItems:
             resp, _ = _search(self.query, status=self.status,
-                              startKey=self.nextKey)
+                              startKey=self.nextKey, accessToken=self.token)
             self._curPageItems = resp["data"]["search"]["itemsList"]
 
             count += len(self._curPageItems)
@@ -54,13 +74,17 @@ class ResultSet:
                 yield rawItem
 
 
-
-def _search(query, status: SearchItemStatus = SearchItemStatus.ON_SALE, startKey=None):
+def _search(query, status: SearchItemStatus = SearchItemStatus.ON_SALE, startKey=None, accessToken=None):
+    if not accessToken:
+        raise ValueError("Must provide an access token")
     operationName = "searchFacetQuery"
     extensions = {
         "persistedQuery": {
             "version": 1,
-            "sha256Hash": "5b7b667eaf8a796406058428fa5df18e7cecd5229702ee0753a091d980884d38"
+            # this is super prone to breaking randomly and I'm not sure how to fix this permanently
+            # maybe a way to lookup dynamically on start and fetch the hash we want for the operation?
+            # is that even a method or call somewhere? more research needed - definitely coded into JS if not
+            "sha256Hash": "fdd28902469c1a04084b852708ecd84ab7428d68fb52f4f416545cacedb60c8a"
         }
     }
     variables = {
@@ -103,13 +127,26 @@ def _search(query, status: SearchItemStatus = SearchItemStatus.ON_SALE, startKey
             # also, here's a funny thing - if you put "python"
             # anywhere here, it just decides to block it
             # with a varnish 403 error. isn't that fun?
-            "User-Agent": "mercarius wrapper"
+            "User-Agent": USER_AGENT,
+            "authorization": "Bearer {}".format(accessToken), # the new auth fix
+            "apollo-require-preflight": "true",
         }
     )
 
-    return resp.json(), variables
+    resp.raise_for_status()
+
+    data = resp.json()
+
+    if('errors' in data):
+        errorMsgs = ','.join([e["message"] for e in data["errors"]])
+        raise ValueError(f"Error on query, {errorMsgs}")
+
+    return data, variables
 
 
 def search(query, status: SearchItemStatus = SearchItemStatus.ON_SALE, limit=1000):
-    resp, variables = _search(query, status)
-    return ResultSet(resp, limit, variables, status)
+    token = generateAccessToken()
+
+    resp, variables = _search(query, status, accessToken=token)
+
+    return ResultSet(resp, limit, variables, status, token)
