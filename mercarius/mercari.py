@@ -1,6 +1,8 @@
 from enum import Enum
-
+from hashlib import sha256
 import json
+import os
+import re
 
 import requests
 
@@ -9,7 +11,7 @@ rootURL = "https://www.mercari.com/"
 searchURL = "{}v1/api".format(rootURL)
 initializeURL = "{}v1/initialize".format(rootURL)
 
-USER_AGENT = "mercarius wrapper"
+USER_AGENT = "mercarius wrapper v2"
 
 
 def generateAccessToken():
@@ -74,17 +76,30 @@ class ResultSet:
                 yield rawItem
 
 
+def loadSearchFacetQuery():
+    file_dir = os.path.dirname(os.path.realpath(__file__))
+    file_path = os.path.join(file_dir, 'searchFacetQuery.graphql')
+    with open(file=file_path) as f:
+        return f.read()
+
+
 def _search(query, status: SearchItemStatus = SearchItemStatus.ON_SALE, startKey=None, accessToken=None):
     if not accessToken:
         raise ValueError("Must provide an access token")
     operationName = "searchFacetQuery"
+
+    graphQlQuery = re.sub(' {2,}', ' ', ("".join(
+        loadSearchFacetQuery().splitlines())))
+
+    hash = sha256(graphQlQuery.encode('utf-8')).hexdigest()
+
     extensions = {
         "persistedQuery": {
             "version": 1,
             # this is super prone to breaking randomly and I'm not sure how to fix this permanently
             # maybe a way to lookup dynamically on start and fetch the hash we want for the operation?
             # is that even a method or call somewhere? more research needed - definitely coded into JS if not
-            "sha256Hash": "fdd28902469c1a04084b852708ecd84ab7428d68fb52f4f416545cacedb60c8a"
+            "sha256Hash": hash
         }
     }
     variables = {
@@ -118,7 +133,8 @@ def _search(query, status: SearchItemStatus = SearchItemStatus.ON_SALE, startKey
         params={
             "operationName": operationName,
             "extensions": json.dumps(extensions),
-            "variables": json.dumps(variables)
+            "variables": json.dumps(variables),
+            "query": graphQlQuery
         },
         headers={
             # some generic header is needed to prevent them instablocking us
@@ -128,7 +144,8 @@ def _search(query, status: SearchItemStatus = SearchItemStatus.ON_SALE, startKey
             # anywhere here, it just decides to block it
             # with a varnish 403 error. isn't that fun?
             "User-Agent": USER_AGENT,
-            "authorization": "Bearer {}".format(accessToken), # the new auth fix
+            # the new auth fix
+            "authorization": "Bearer {}".format(accessToken),
             "apollo-require-preflight": "true",
         }
     )
@@ -137,7 +154,7 @@ def _search(query, status: SearchItemStatus = SearchItemStatus.ON_SALE, startKey
 
     data = resp.json()
 
-    if('errors' in data):
+    if ('errors' in data):
         errorMsgs = ','.join([e["message"] for e in data["errors"]])
         raise ValueError(f"Error on query, {errorMsgs}")
 
