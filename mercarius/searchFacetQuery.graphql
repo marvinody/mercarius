@@ -1,0 +1,227 @@
+query searchFacetQuery($criteria: SearchInput!) {
+  search(criteria: $criteria) {
+    ...SearchFacetResponseFragment
+    __typename
+  }
+}
+
+fragment SearchFacetResponseFragment on SearchResponse {
+  relatedCityPageLinks {
+    title
+    path
+    __typename
+  }
+  pageTitle
+  localeTitle
+  page {
+    offset
+    soldItemsOffset
+    promotedItemsOffset
+    __typename
+  }
+  count
+  nextKey
+  searchId
+  parsedQuery
+  metadata {
+    queryAfterRemoval
+    __typename
+  }
+
+  initRequestTime
+  itemsList {
+    ...ItemListDetailsFragment
+    __typename
+  }
+  criteria {
+    ...CriteriaFragment
+    __typename
+  }
+  ...FacetGroupsListFragment
+  ...FeaturedFilterGroupsListFragment
+  __typename
+}
+
+fragment ItemListDetailsFragment on Item {
+  id
+  name
+  status
+  description
+  originalPrice
+  shippingPayer {
+    id
+    name
+    code
+    __typename
+  }
+  itemCategoryHierarchy {
+    id
+    level
+    name
+    __typename
+  }
+  photos {
+    imageUrl
+    thumbnail
+    __typename
+  }
+  seller {
+    id
+    sellerId: id
+    photo
+    __typename
+  }
+  price
+  itemDecoration {
+    id
+    imageUrl
+    __typename
+  }
+  itemDecorationCircle {
+    icon
+    __typename
+  }
+  itemDecorationRectangle {
+    textColor
+    backgroundColor
+    icon
+    text
+    __typename
+  }
+  brand {
+    id
+    name
+    __typename
+  }
+  itemSize {
+    id
+    name
+    __typename
+  }
+  itemCondition {
+    id
+    name
+    __typename
+  }
+  itemCategory {
+    id
+    name
+    __typename
+  }
+  customFacetsList {
+    facetName
+    value
+    __typename
+  }
+  isAuthenticLux
+  promoteType
+  promoteExpireTime
+  me {
+    isItemLiked
+    userId
+    __typename
+  }
+  localShippingPartnerZonesList
+  isLocalPurchaseEligible
+  pagerId
+  authenticItemStatus {
+    status
+    __typename
+  }
+  localDeliveryPartnerIds
+  categoryTitle
+  categoryId
+  __typename
+}
+
+fragment CriteriaFragment on SearchCriteria {
+  query
+  sortBy
+  categoryIds
+  colorIds
+  brandIds
+  itemStatuses
+  itemConditions
+  shippingPayerIds
+  sizeGroupIds
+  sizeIds
+  maxPrice
+  minPrice
+  authenticities
+  skuIds
+  customFacets {
+    facetTitle
+    facetValuesList
+    __typename
+  }
+  deliveryType
+  withCouponOnly
+  excludeShippingTypes
+  __typename
+}
+
+fragment FacetGroupsListFragment on SearchResponse {
+  facetGroupsList {
+    displayTitle
+    systemName
+    facetType
+    facetsList {
+      title
+      popularity
+      criteria {
+        categoryIds
+        brandIds
+        itemStatuses
+        itemConditions
+        shippingPayerIds
+        sizeGroupIds
+        sizeIds
+        customFacets {
+          facetTitle
+          facetValuesList
+          __typename
+        }
+        authenticities
+        localShippingPartnerZones
+        colorIds
+        __typename
+      }
+      __typename
+    }
+    __typename
+  }
+  __typename
+}
+
+fragment FeaturedFilterGroupsListFragment on SearchResponse {
+  featuredFilterGroupsList {
+    displayTitle
+    facetType
+    featuredFiltersList {
+      title
+      subtitle
+      criteria {
+        categoryIds
+        brandIds
+        itemStatuses
+        itemConditions
+        shippingPayerIds
+        sizeGroupIds
+        sizeIds
+        customFacets {
+          facetTitle
+          facetValuesList
+          __typename
+        }
+        authenticities
+        localShippingPartnerZones
+        colorIds
+        __typename
+      }
+      __typename
+    }
+    systemName
+    __typename
+  }
+  __typename
+}
